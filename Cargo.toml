@@ -1,0 +1,20 @@
+[package]
+name = "syntheraqr"
+version = "0.1.0"
+edition = "2021"
+description = "Ultra-modern QR code generator CLI with terminal preview (kitty graphics protocol)"
+license = "MIT"
+
+[dependencies]
+qrcode = "0.14"
+image = { version = "0.25", features = ["png", "jpeg", "webp"] }
+clap = { version = "4", features = ["derive"] }
+base64 = "0.22"
+libc = "0.2"
+
+[dev-dependencies]
+rqrr = "0.10"
+
+[profile.release]
+strip = true
+lto = true
