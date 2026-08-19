@@ -125,6 +125,7 @@ pub fn transmit_kitty(png: &[u8], img_size: u32) {
     );
 
     let mut stdout = std::io::stdout();
+    let _ = stdout.write_all(b"\n");
     let total_chunks = b64.len().div_ceil(CHUNK_LIMIT);
     for (i, chunk) in b64.as_bytes().chunks(CHUNK_LIMIT).enumerate() {
         let last = i + 1 == total_chunks;

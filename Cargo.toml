@@ -9,10 +9,9 @@ license = "MIT"
 qrcode = "0.14"
 image = { version = "0.25", features = ["png", "jpeg", "webp"] }
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
 base64 = "0.22"
 libc = "0.2"
-
-[dev-dependencies]
 rqrr = "0.10"
 
 [profile.release]
