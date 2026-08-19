@@ -11,10 +11,11 @@ pub fn print_block(img: &RgbaImage, max_cols: u32) {
     let scaled = if target_w == w && target_h == h {
         img.clone()
     } else {
-        image::imageops::resize(img, target_w, target_h, FilterType::Lanczos3)
+        image::imageops::resize(img, target_w, target_h, FilterType::Triangle)
     };
 
     let mut out = String::with_capacity(target_w as usize * target_h as usize * 8);
+    out.push('\n');
     let rows = (target_h as usize).div_ceil(2);
     for pair in 0..rows {
         let y_upper = pair * 2;

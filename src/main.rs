@@ -1,6 +1,7 @@
 use std::io::{IsTerminal, Read, Write};
+use std::process::Command;
 
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use qrcode::{EcLevel, QrCode};
 
 use syntheraqr::block::print_block;
@@ -24,6 +25,10 @@ struct Cli {
     #[arg(long, default_value = "#0f172a")]
     fg: String,
 
+    /// Secondary foreground color: enables a diagonal fg → fg2 gradient
+    #[arg(long)]
+    fg2: Option<String>,
+
     /// Background color, e.g. #f8fafc
     #[arg(long, default_value = "#f8fafc")]
     bg: String,
@@ -37,7 +42,7 @@ struct Cli {
     style: DotStyleArg,
 
     /// Error correction level
-    #[arg(long, value_enum, default_value_t = EccArg::Medium)]
+    #[arg(short = 'e', long, value_enum, default_value_t = EccArg::Medium)]
     error: EccArg,
 
     /// Output size in pixels
@@ -71,12 +76,44 @@ struct Cli {
     /// Force half-block character preview
     #[arg(long)]
     force_block: bool,
+
+    /// Open the saved file with the system viewer
+    #[arg(long)]
+    open: bool,
+
+    /// Suppress informational messages
+    #[arg(short, long)]
+    quiet: bool,
+
+    /// Print shell completion script and exit
+    #[arg(long, value_enum)]
+    completions: Option<clap_complete::Shell>,
+
+    #[command(subcommand)]
+    cmd: Option<SubCmd>,
+}
+
+#[derive(Subcommand, Debug)]
+enum SubCmd {
+    /// Decode a QR code image file and print its content
+    Decode { image: String },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum DotStyleArg {
     Rounded,
     Square,
+    Dots,
+}
+
+impl DotStyleArg {
+    fn to_style(self) -> DotStyle {
+        match self {
+            DotStyleArg::Rounded => DotStyle::Rounded,
+            DotStyleArg::Square => DotStyle::Square,
+            DotStyleArg::Dots => DotStyle::Dots,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -85,6 +122,17 @@ enum EccArg {
     Medium,
     Quartile,
     High,
+}
+
+impl EccArg {
+    fn label(self) -> &'static str {
+        match self {
+            EccArg::Low => "L",
+            EccArg::Medium => "M",
+            EccArg::Quartile => "Q",
+            EccArg::High => "H",
+        }
+    }
 }
 
 impl From<EccArg> for EcLevel {
@@ -126,44 +174,71 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), String> {
+    if let Some(SubCmd::Decode { image }) = &cli.cmd {
+        return run_decode(image);
+    }
+
+    if let Some(shell) = cli.completions {
+        let mut cmd = Cli::command();
+        clap_complete::generate(shell, &mut cmd, "syntheraqr", &mut std::io::stdout());
+        return Ok(());
+    }
+
     if cli.output.is_some() && cli.stdout {
         return Err("cannot use --output and --stdout together".into());
+    }
+    if cli.open && cli.output.is_none() {
+        return Err("--open requires --output".into());
     }
 
     let text = match cli.text.clone() {
         Some(t) if !t.is_empty() => t,
         _ => {
             if std::io::stdin().is_terminal() {
-                return Err("no input given; pass TEXT as an argument or pipe it via stdin".into());
+                eprint!("Text to encode: ");
+                std::io::stderr()
+                    .flush()
+                    .map_err(|e| format!("failed to flush stderr: {e}"))?;
+                let mut buf = String::new();
+                std::io::stdin()
+                    .read_line(&mut buf)
+                    .map_err(|e| format!("failed to read input: {e}"))?;
+                let t = buf.trim().to_string();
+                if t.is_empty() {
+                    return Err("no input given; pass TEXT as an argument or pipe it via stdin"
+                        .into());
+                }
+                t
+            } else {
+                let mut buf = String::new();
+                std::io::stdin()
+                    .read_to_string(&mut buf)
+                    .map_err(|e| format!("failed to read stdin: {e}"))?;
+                if buf.trim().is_empty() {
+                    return Err("no input given; pass TEXT as an argument or pipe it via stdin"
+                        .into());
+                }
+                buf.trim().to_string()
             }
-            let mut buf = String::new();
-            std::io::stdin()
-                .read_to_string(&mut buf)
-                .map_err(|e| format!("failed to read stdin: {e}"))?;
-            if buf.trim().is_empty() {
-                return Err("no input given; pass TEXT as an argument or pipe it via stdin".into());
-            }
-            buf.trim().to_string()
         }
     };
 
     let fg = parse_hex(&cli.fg)?;
+    let fg2 = cli.fg2.as_deref().map(parse_hex).transpose()?;
     let bg = if cli.transparent { None } else { Some(parse_hex(&cli.bg)?) };
 
     let opts = RenderOptions {
         fg,
+        fg2,
         bg,
-        style: match cli.style {
-            DotStyleArg::Rounded => DotStyle::Rounded,
-            DotStyleArg::Square => DotStyle::Square,
-        },
+        style: cli.style.to_style(),
         margin: cli.margin,
         size: cli.size,
     };
 
     let qr = QrCode::with_error_correction_level(text.as_bytes(), cli.error.into())
         .map_err(|_| "input too long to fit in a QR code".to_string())?;
-    let img = render(&qr, &opts);
+    let img = render(&qr, &opts)?;
 
     let stdout_tty = std::io::stdout().is_terminal();
 
@@ -179,7 +254,12 @@ fn run(cli: Cli) -> Result<(), String> {
         };
         let bytes = encode(&img, format, &qr, &opts)?;
         std::fs::write(path, &bytes).map_err(|e| format!("failed to write {path}: {e}"))?;
-        eprintln!("saved {}", path);
+        if !cli.quiet {
+            eprintln!("saved {} ({:.1} KiB)", path, bytes.len() as f64 / 1024.0);
+        }
+        if cli.open {
+            open_file(path)?;
+        }
     } else if cli.stdout || !stdout_tty {
         let format = cli.format.map(Into::into).unwrap_or(Format::Png);
         let bytes = encode(&img, format, &qr, &opts)?;
@@ -192,20 +272,59 @@ fn run(cli: Cli) -> Result<(), String> {
         return Ok(());
     }
 
+    if !cli.quiet {
+        eprintln!(
+            "QR {}×{} modules · ECC {} · {} px",
+            qr.width(),
+            qr.width(),
+            cli.error.label(),
+            cli.size
+        );
+    }
+
     if !cli.no_show && stdout_tty {
         let mut disp = opts;
         disp.margin = 0;
-        disp.size = 512;
-        let img_disp = render(&qr, &disp);
-        let png = encode(&img_disp, Format::Png, &qr, &disp)?;
         if terminal::supports_kitty(cli.force_kitty, cli.force_block) {
+            disp.size = 512;
+            let img_disp = render(&qr, &disp)?;
+            let png = encode(&img_disp, Format::Png, &qr, &disp)?;
             terminal::transmit_kitty(&png, disp.size);
         } else {
             let (cols, _rows) = terminal::terminal_size();
+            disp.size = (cols.saturating_mul(2)).max(32);
+            let img_disp = render(&qr, &disp)?;
             print_block(&img_disp, cols);
         }
     }
 
+    Ok(())
+}
+
+fn run_decode(path: &str) -> Result<(), String> {
+    let img = image::open(path).map_err(|e| format!("cannot open \"{path}\": {e}"))?;
+    let luma = img.to_luma8();
+    let mut prepared = rqrr::PreparedImage::prepare(luma);
+    for grid in prepared.detect_grids() {
+        if let Ok((_, content)) = grid.decode() {
+            println!("{content}");
+            return Ok(());
+        }
+    }
+    Err(format!("no QR code found in \"{path}\""))
+}
+
+fn open_file(path: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let cmd = ("open", path);
+    #[cfg(target_os = "windows")]
+    let cmd = ("cmd", path);
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let cmd = ("xdg-open", path);
+    Command::new(cmd.0)
+        .arg(cmd.1)
+        .spawn()
+        .map_err(|e| format!("failed to open {path}: {e}"))?;
     Ok(())
 }
 
