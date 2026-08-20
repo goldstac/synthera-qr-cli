@@ -122,34 +122,10 @@ Keep clippy at 0 warnings and all tests green before finishing any change.
 
 ## Social / announcements
 
-- Announce significant releases and website updates as tweets (drafted for the
-  user to post). Style: punchy opener, what's new in bullet form, a usage/
-  install one-liner, hashtags (#OpenSource #Rust #QRCode #DevTools
-  #Terminal). Keep the tone energetic but factual.
-- **Current announcement draft (v0.2.0 + website update):**
-
-  > syntheraqr v0.2.0 is out! 🎉
-  >
-  > The terminal QR generator that matches the syntheraqr.netlify.app
-  > engine just learned how to update itself:
-  >
-  > ✨ `syntheraqr update` — self-updates from GitHub Releases
-  > ✨ `update --check` — see installed vs latest version
-  > ✨ `update --force` — reinstall any time
-  >
-  > Plus the website got a full Docs page for the CLI (install, usage,
-  > options, terminal preview, offline) and an expanded CLI section on the
-  > homepage.
-  >
-  > 📦 `curl -fsSL https://syntheraqr.netlify.app/install | bash`
-  >
-  > 100% offline for generating/previewing/saving — only update + install
-  > need the internet.
-  >
-  > #OpenSource #Rust #QRCode #DevTools #Terminal
-
-- After posting, replace the draft with a short "posted" note (link if the
-  user shares one).
+- When the user asks for a tweet announcing a release or website update,
+  draft it in chat (not in this file). Style: punchy opener, what's new in
+  bullet form, a usage/install one-liner, hashtags (#OpenSource #Rust #QRCode
+  #DevTools #Terminal). Keep the tone energetic but factual.
 
 ## Related resources
 
