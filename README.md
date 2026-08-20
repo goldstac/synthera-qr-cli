@@ -15,6 +15,8 @@ preview, and save QR codes entirely from the command line.
   transparent background, rounded/square/dots dot styles, error correction
   levels, quiet-zone margin
 - Save as **PNG, JPG, SVG, or WebP** (all rendered locally, no network)
+- Fully **offline** for generating, previewing, saving, and decoding — only
+  `update` and installing require the internet (see [Offline](#offline))
 
 ## Install
 
@@ -26,6 +28,27 @@ curl -fsSL https://syntheraqr.netlify.app/install | bash
 
 Installs to `~/.local/bin/syntheraqr` (prebuilt binary from GitHub
 Releases, falling back to a source build if no binary matches your system).
+
+## Offline
+
+**Everything you do day-to-day works with no internet connection.** QR
+generation, rendering, styling, previewing, saving (PNG/JPG/SVG/WebP), and
+`decode` are all computed locally by the binary — there are no external
+runtimes, fonts, or CDN assets.
+
+The **only** commands that need a network connection:
+
+- **`syntheraqr update`** — reaches the GitHub API and downloads the new
+  binary
+- **Installing** — `curl -fsSL https://syntheraqr.netlify.app/install | bash`
+  fetches the installer and binary
+
+Everything else runs fully offline.
+
+## Docs
+
+Full documentation lives in [`docs/`](docs/README.md): install, usage,
+terminal preview, offline behavior, and development notes.
 
 ## Build
 
@@ -53,6 +76,11 @@ syntheraqr "grad" --fg "#0f172a" --fg2 "#6366f1" -o grad.svg
 # Decode a QR code back to text
 syntheraqr decode qr.png
 
+# Check for and apply updates (downloaded from GitHub Releases)
+syntheraqr update --check     # report installed vs latest version
+syntheraqr update             # download and install the latest version
+syntheraqr update --force     # reinstall even if already up to date
+
 # Open the saved file in the system viewer
 syntheraqr "hello" -o qr.png --open
 
@@ -74,6 +102,8 @@ syntheraqr "data" --stdout --format svg > qr.svg
 
 | Option | Description | Default |
 | --- | --- | --- |
+| `decode <IMAGE>` | Decode a QR image back to text | — |
+| `update [--check] [--force]` | Self-update from GitHub Releases | — |
 | `TEXT` | Text or URL to encode (or pipe via stdin) | — |
 | `--fg <HEX>` | Foreground (dot) color | `#0f172a` |
 | `--fg2 <HEX>` | Secondary color → diagonal gradient | off |

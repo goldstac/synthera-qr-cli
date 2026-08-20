@@ -97,6 +97,16 @@ struct Cli {
 enum SubCmd {
     /// Decode a QR code image file and print its content
     Decode { image: String },
+
+    /// Check for and apply updates from GitHub Releases
+    Update {
+        /// Only report the latest version without downloading
+        #[arg(long)]
+        check: bool,
+        /// Install even if the installed version is current
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -165,7 +175,31 @@ impl From<FormatArg> for Format {
     }
 }
 
+const LOGO: &str = r#"
+   _____             __  __
+  / ___/__  ______  / /_/ /_  ___  _________ _____ ______
+  \__ \/ / / / __ \/ __/ __ \/ _ \/ ___/ __ `/ __ `/ ___/
+ ___/ / /_/ / / / / /_/ / / /  __/ /  / /_/ / /_/ / /
+/____/\__, /_/ /_/\__/_/ /_/\___/_/   \__,_/\__, /_/
+     /____/                                   /_/
+"#;
+
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let wants_help = args.iter().any(|a| a == "-h" || a == "--help");
+    let wants_version = args.iter().any(|a| a == "-V" || a == "--version");
+    let sub = args.get(1).map(String::as_str);
+    let sub_help = sub.is_some_and(|s| matches!(s, "decode" | "update")) && wants_help;
+    if (wants_help || wants_version) && !sub_help {
+        print!("{LOGO}");
+        if wants_version {
+            println!("syntheraqr {}", env!("CARGO_PKG_VERSION"));
+            return;
+        }
+        let mut cmd = Cli::command();
+        let _ = cmd.print_long_help();
+        return;
+    }
     let cli = Cli::parse();
     if let Err(e) = run(cli) {
         eprintln!("syntheraqr: {e}");
@@ -176,6 +210,14 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     if let Some(SubCmd::Decode { image }) = &cli.cmd {
         return run_decode(image);
+    }
+
+    if let Some(SubCmd::Update { check, force }) = &cli.cmd {
+        return if *check {
+            syntheraqr::update::check()
+        } else {
+            syntheraqr::update::update(*force)
+        };
     }
 
     if let Some(shell) = cli.completions {
