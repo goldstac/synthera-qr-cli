@@ -15,6 +15,8 @@ preview, and save QR codes entirely from the command line.
   transparent background, rounded/square/dots dot styles, error correction
   levels, quiet-zone margin
 - Save as **PNG, JPG, SVG, or WebP** (all rendered locally, no network)
+- Fully **offline** for generating, previewing, saving, and decoding — only
+  `update` and installing require the internet (see [Offline](#offline))
 
 ## Install
 
@@ -26,6 +28,27 @@ curl -fsSL https://syntheraqr.netlify.app/install | bash
 
 Installs to `~/.local/bin/syntheraqr` (prebuilt binary from GitHub
 Releases, falling back to a source build if no binary matches your system).
+
+## Offline
+
+**Everything you do day-to-day works with no internet connection.** QR
+generation, rendering, styling, previewing, saving (PNG/JPG/SVG/WebP), and
+`decode` are all computed locally by the binary — there are no external
+runtimes, fonts, or CDN assets.
+
+The **only** commands that need a network connection:
+
+- **`syntheraqr update`** — reaches the GitHub API and downloads the new
+  binary
+- **Installing** — `curl -fsSL https://syntheraqr.netlify.app/install | bash`
+  fetches the installer and binary
+
+Everything else runs fully offline.
+
+## Docs
+
+Full documentation lives in [`docs/`](docs/README.md): install, usage,
+terminal preview, offline behavior, and development notes.
 
 ## Build
 
