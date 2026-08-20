@@ -53,6 +53,11 @@ syntheraqr "grad" --fg "#0f172a" --fg2 "#6366f1" -o grad.svg
 # Decode a QR code back to text
 syntheraqr decode qr.png
 
+# Check for and apply updates (downloaded from GitHub Releases)
+syntheraqr update --check     # report installed vs latest version
+syntheraqr update             # download and install the latest version
+syntheraqr update --force     # reinstall even if already up to date
+
 # Open the saved file in the system viewer
 syntheraqr "hello" -o qr.png --open
 
@@ -74,6 +79,8 @@ syntheraqr "data" --stdout --format svg > qr.svg
 
 | Option | Description | Default |
 | --- | --- | --- |
+| `decode <IMAGE>` | Decode a QR image back to text | — |
+| `update [--check] [--force]` | Self-update from GitHub Releases | — |
 | `TEXT` | Text or URL to encode (or pipe via stdin) | — |
 | `--fg <HEX>` | Foreground (dot) color | `#0f172a` |
 | `--fg2 <HEX>` | Secondary color → diagonal gradient | off |

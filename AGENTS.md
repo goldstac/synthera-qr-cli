@@ -21,6 +21,10 @@ What it does:
 - Inline terminal preview via the **kitty graphics protocol** with a
   half-block (`▀`) ANSI truecolor fallback
 - `syntheraqr decode <image>` reads a QR back to text (rqrr)
+- `syntheraqr update [--check] [--force]` self-updates: fetches the latest
+  release tag from the GitHub API, downloads the matching `syntheraqr-<os>-<arch>`
+  asset, sanity-checks it with `--version`, and atomically `rename`s it over
+  the running binary (`src/update.rs`)
 - `--completions bash|zsh|fish|powershell|elvish` prints shell completions
 - Unix-filter style: when stdout is not a TTY, image bytes are written to
   stdout instead of previewing
@@ -68,6 +72,11 @@ Keep clippy at 0 warnings and all tests green before finishing any change.
   of the terminal assuming 2:1 cells.
 - `src/block.rs` — half-block fallback renderer (upper pixel = `38;2` fg,
   lower = `48;2` bg, run-length grouped, `▀` glyphs, Triangle downscale)
+- `src/update.rs` — self-update: GitHub API version check, download, sanity
+  check (`--version`), atomic self-replacement via `rename` (Unix). Adds
+  `ureq` (HTTP) and small manual JSON parse — no serde. Update happens only
+  when the installed binary supports it (0.2.0+); older installs must
+  reinstall once via the installer.
 - `tests/roundtrip.rs` — decode generated images with `rqrr` and assert the
   content round-trips; also color/margin/alpha/SVG/gradient/layout checks
 
@@ -105,7 +114,7 @@ Keep clippy at 0 warnings and all tests green before finishing any change.
 
 - Rust edition 2021. Dependencies: `qrcode`, `image` (png/jpeg/webp
   features), `clap` (derive), `clap_complete`, `base64`, `libc`, `rqrr`
-  (decode subcommand and tests).
+  (decode subcommand and tests), `ureq` (self-update).
 - No code comments unless they document non-obvious protocol/shape logic
   (existing comments follow this rule).
 - README.md documents the CLI surface and terminal-support matrix — update it

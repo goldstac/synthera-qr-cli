@@ -97,6 +97,16 @@ struct Cli {
 enum SubCmd {
     /// Decode a QR code image file and print its content
     Decode { image: String },
+
+    /// Check for and apply updates from GitHub Releases
+    Update {
+        /// Only report the latest version without downloading
+        #[arg(long)]
+        check: bool,
+        /// Install even if the installed version is current
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -178,8 +188,9 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let wants_help = args.iter().any(|a| a == "-h" || a == "--help");
     let wants_version = args.iter().any(|a| a == "-V" || a == "--version");
-    let decode_help = args.get(1).map(String::as_str) == Some("decode") && wants_help;
-    if (wants_help || wants_version) && !decode_help {
+    let sub = args.get(1).map(String::as_str);
+    let sub_help = sub.is_some_and(|s| matches!(s, "decode" | "update")) && wants_help;
+    if (wants_help || wants_version) && !sub_help {
         print!("{LOGO}");
         if wants_version {
             println!("syntheraqr {}", env!("CARGO_PKG_VERSION"));
@@ -199,6 +210,14 @@ fn main() {
 fn run(cli: Cli) -> Result<(), String> {
     if let Some(SubCmd::Decode { image }) = &cli.cmd {
         return run_decode(image);
+    }
+
+    if let Some(SubCmd::Update { check, force }) = &cli.cmd {
+        return if *check {
+            syntheraqr::update::check()
+        } else {
+            syntheraqr::update::update(*force)
+        };
     }
 
     if let Some(shell) = cli.completions {
