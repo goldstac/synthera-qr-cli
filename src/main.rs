@@ -165,7 +165,33 @@ impl From<FormatArg> for Format {
     }
 }
 
+const LOGO: &str = r#"
+###   ######   ###
+# #   #    #   # #
+# #   #        # #
+###   #####    ###
+      #    #
+      #    #   ###
+      ######   # #
+               ###
+SYNTHERAQR CLI
+"#;
+
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let wants_help = args.iter().any(|a| a == "-h" || a == "--help");
+    let wants_version = args.iter().any(|a| a == "-V" || a == "--version");
+    let decode_help = args.get(1).map(String::as_str) == Some("decode") && wants_help;
+    if (wants_help || wants_version) && !decode_help {
+        print!("{LOGO}");
+        if wants_version {
+            println!("syntheraqr {}", env!("CARGO_PKG_VERSION"));
+            return;
+        }
+        let mut cmd = Cli::command();
+        let _ = cmd.print_long_help();
+        return;
+    }
     let cli = Cli::parse();
     if let Err(e) = run(cli) {
         eprintln!("syntheraqr: {e}");
